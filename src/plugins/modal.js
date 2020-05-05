@@ -93,7 +93,7 @@ $.modal = function (options) {
       setTimeout(() => {
         $modal.classList.remove("hide");
         closing = false;
-      }, ANIMATION_SPEED)
+      }, ANIMATION_SPEED);
     },
   };
 
@@ -115,6 +115,9 @@ $.modal = function (options) {
     },
     setContent(html) {
       $modal.querySelector("[data-content]").innerHTML = html;
-    }
+    },
+    setTitle(html) {
+      $modal.querySelector(".modal-title").innerHTML = html;
+    },
   });
 };
