@@ -1,126 +1,72 @@
-import {$} from "./base"
-import "./plugins/modal"
+import {$} from "@/base";
+import "@/plugins/modal"
+import "@/plugins/confirm"
 
-export function createFruitsListItem(fruit) {
-
-  let fruitCard = `
-    <img class="card-img-top" src="${fruit.img || ''}">
-    <div class="card-body">
-      <h5 class="card-title">${fruit.title || 'Unknown fruit'}</h5>
-      <a href="#!" class="btn btn-primary" data-price="${fruit.price}">Check price</a>
-      <a href="#!" class="btn btn-danger" data-delete>Delete</a>
+const toHML = fruit => `
+    <div class="col">
+      <div class="card" style="width: 300px">
+        <img class="card-img-top" src="${fruit.img || ''}">
+        <div class="card-body">
+          <h5 class="card-title">${fruit.title || 'Unknown fruit'}</h5>
+          <a href="#!" class="btn btn-primary" data-btn="price" data-id="${fruit.id}">Check price</a>
+          <a href="#!" class="btn btn-danger" data-btn="remove" data-id="${fruit.id}">Delete</a>
+        </div>
+      </div>
     </div>
   `;
 
-  return fruitCard;
+function render(fruits) {
+  const html = fruits.map(fruit => toHML(fruit)).join('');
 
+  document.querySelector('[data-fruits]').innerHTML = html;
 }
 
-export function showFruitsList(fruits) {
-
-  let fruitsList = document.querySelector('[data-fruits]');
-
-  let modal = {};
-  modal.window = window;
-
-  fruits.forEach(fruit => {
-
-    const $fruit = document.createElement("div");
-
-    $fruit.classList.add("card");
-
-    $fruit.style.width = "400px";
-
-    let isDeleteCreated = false;
-    let isPriceCreated = false;
-    $fruit.classList.add('col');
-
-    $fruit.innerHTML = createFruitsListItem(fruit);
-    $fruit.setAttribute('data-id', fruit.id);
-
-    $fruit.querySelector('[data-price]').addEventListener('click', (event) => openPriceModal(event));
-    $fruit.querySelector('[data-delete]').addEventListener('click', (event) => openDeleteModal(event));
-
-    fruitsList.insertAdjacentElement('beforeend', $fruit);
-
-    function openPriceModal(event) {
-      event.preventDefault();
-
-      if(isDeleteCreated) {
-        modal.destroy();
-        isDeleteCreated = false
-      }
-
-      if(isPriceCreated) {
-        modal.setTitle(fruit.title);
-        modal.setContent(makePriceContent());
-        modal.open();
-        return
-      }
-
-      modal = $.modal({
-        title: fruit.title,
-        closable: true,
-        content: makePriceContent()
-      });
-      isPriceCreated = true;
-
-      modal.open();
-
-      function makePriceContent() {
-        return  `
-                    <span class="price-title">Цена на ${fruit.title}:</span>
-                    <span class="price">${fruit.price} рублей</span>
-                `
+const priceModal = $.modal({
+  title: "Цена на товар",
+  closable: true,
+  width: '400px',
+  footerButtons: [
+    {
+      text: 'Закрыть', type: 'primary', handler() {
+        priceModal.close();
       }
     }
+  ]
+});
 
-    function openDeleteModal(event) {
+export function addFruitsCards(fruits) {
+
+  render(fruits);
+
+  document.querySelector('[data-fruits]').addEventListener('click',
+    event => {
+
       event.preventDefault();
 
-      if(isPriceCreated) {
-        modal.destroy();
-        isPriceCreated = false
+      const btnType = event.target.dataset.btn;
+
+      const id = parseInt(event.target.dataset.id);
+
+      const fruit = fruits.find(f => f.id === id);
+
+      if (btnType === "price") {
+
+        priceModal.setContent(`
+          <p>Цена на ${fruit.title}: <strong>${fruit.price}$</strong> </p>
+        `);
+
+        priceModal.open();
+      } else if (btnType === 'remove') {
+        $.confirm({
+          title: 'Вы уверены?',
+          content: `<p>Вы удаляете фрукт: <strong>${fruit.title}</strong> </p>`,
+        }).then(() => {
+          fruits = fruits.filter(f => f.id !== id);
+          render(fruits);
+        }).catch(() => {
+          console.log('cancel')
+        })
       }
-
-      if(isDeleteCreated) {
-        modal.setTitle(fruit.title);
-        modal.open();
-        return
-      }
-
-      modal = $.modal({
-        title: `Удалить ${fruit.title} ?`,
-        closable: true,
-        footerButtons: [
-          {
-            text: 'Удалить', type: 'danger', handler() {
-              deleteFruitCard()
-            }
-          },
-          {
-            text: 'Отмена', handler() {
-              modal.close()
-            }
-          }
-        ]
-      });
-      isDeleteCreated = true;
-
-      modal.open();
-
-      function deleteFruitCard() {
-        const card = fruitsList.querySelector(`[data-id="${fruit.id}"]`);
-        card.querySelector('[data-price]').removeEventListener('click', () => openPriceModal(event));
-        card.querySelector('[data-delete]').removeEventListener('click', () => openDeleteModal(event));
-        card.parentNode.removeChild(card);
-
-        modal.destroy();
-        isDeleteCreated = false
-      }
-
     }
-
-  })
-
+  );
 }
